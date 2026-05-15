@@ -1,0 +1,17 @@
+@import 'tailwindcss';
+
+* {
+  @apply scroll-smooth;
+}
+
+html {
+  background: #ffffff;
+  min-height: 100vh;
+  color-scheme: light;
+}
+
+body {
+  background: #ffffff;
+  overflow-x: hidden;
+  color: #000000;
+}
