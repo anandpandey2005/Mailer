@@ -1,9 +1,11 @@
 import React, {
   useState,
+  useEffect,
   type ReactEventHandler,
   type ReactHTMLElement,
 } from "react";
 import Alert from "../ui/Alert";
+import { connectSocket, getSocket, onEmailEvent, emitEmailEvent } from "../../handler/socket";
 
 const MainSendEmail = () => {
   let [formData, setFormData] = useState({
@@ -23,6 +25,40 @@ const MainSendEmail = () => {
     type: "info",
     message: "",
   });
+
+  useEffect(() => {
+    // Connect to socket
+    const socket = connectSocket();
+
+    // Listen for email events
+    onEmailEvent('email_sent', (data) => {
+      setAlertState({
+        show: true,
+        type: "success",
+        message: `Email sent: ${data.message}`,
+      });
+    });
+
+    onEmailEvent('email_error', (data) => {
+      setAlertState({
+        show: true,
+        type: "error",
+        message: `Email error: ${data.message}`,
+      });
+    });
+
+    onEmailEvent('email_status', (data) => {
+      setAlertState({
+        show: true,
+        type: "info",
+        message: `Status: ${data.message}`,
+      });
+    });
+
+    return () => {
+      // Optional: cleanup when component unmounts
+    };
+  }, []);
   const handleOnChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -52,6 +88,13 @@ const MainSendEmail = () => {
       return;
     }
 
+    // Emit socket event for email sending start
+    emitEmailEvent('email_sending', {
+      appName: formData.appName,
+      subject: formData.subject,
+      recipientEmail: formData.userEmail,
+    });
+
     const fileInput = e.currentTarget.elements.namedItem(
       "fileInput",
     ) as HTMLInputElement;
@@ -74,6 +117,10 @@ const MainSendEmail = () => {
       .then((res) => res.json())
       .then((data) => {
         console.log("Success:", data);
+        
+        // Emit socket event for success
+        emitEmailEvent('email_success', { data });
+        
         setAlertState({
           show: true,
           type: "success",
@@ -90,6 +137,10 @@ const MainSendEmail = () => {
       })
       .catch((error) => {
         console.error("Error:", error);
+        
+        // Emit socket event for error
+        emitEmailEvent('email_failure', { error: error.message });
+        
         setAlertState({
           show: true,
           type: "error",

@@ -14,6 +14,7 @@ app.get('/health', (req: Request, res: Response) => {
 
     res.json({
         upTime: process.uptime(),
+
     })
 })
 export default app;
