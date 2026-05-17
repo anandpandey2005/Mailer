@@ -1,7 +1,9 @@
 import { MainSendEmail } from "../../components";
-
+import { Megaphone, UserCheck, FileText, Mail, Zap, Lock } from "lucide-react";
 export default function Homepage() {
+
   return (
+
     <div className="space-y-12">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-white border-4 border-black p-12 md:p-16">
@@ -18,10 +20,16 @@ export default function Homepage() {
             personalized campaigns using custom templates in seconds.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="px-8 py-3 bg-black hover:bg-gray-800 text-white font-bold transition-all duration-300 border-2 border-black">
+            <button
+              onClick={() => document.getElementById('get-started')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-8 py-3 bg-black hover:bg-gray-800 text-white font-bold transition-all duration-300 border-2 border-black"
+            >
               Get Started
             </button>
-            <button className="px-8 py-3 border-2 border-black text-black hover:bg-black hover:text-white font-bold transition-all duration-300">
+            <button
+              onClick={() => document.getElementById('learn-more')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-8 py-3 border-2 border-black text-black hover:bg-black hover:text-white font-bold transition-all duration-300"
+            >
               Learn More
             </button>
           </div>
@@ -34,13 +42,7 @@ export default function Homepage() {
         <div className="group relative overflow-hidden bg-white border-2 border-black p-8 hover:bg-gray-50 transition-all duration-300">
           <div className="relative z-10">
             <div className="w-12 h-12 bg-black flex items-center justify-center mb-4">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path>
-              </svg>
+              <FileText className="w-6 h-6 text-white" />
             </div>
             <h3
               className="text-xl font-black text-black mb-2"
@@ -59,14 +61,7 @@ export default function Homepage() {
         <div className="group relative overflow-hidden bg-white border-2 border-black p-8 hover:bg-gray-50 transition-all duration-300">
           <div className="relative z-10">
             <div className="w-12 h-12 bg-black flex items-center justify-center mb-4">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-              </svg>
+              <Mail className="w-6 h-6 text-white" />
             </div>
             <h3
               className="text-xl font-black text-black mb-2"
@@ -85,17 +80,7 @@ export default function Homepage() {
         <div className="group relative overflow-hidden bg-white border-2 border-black p-8 hover:bg-gray-50 transition-all duration-300">
           <div className="relative z-10">
             <div className="w-12 h-12 bg-black flex items-center justify-center mb-4">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 17v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.381z"
-                  clipRule="evenodd"
-                ></path>
-              </svg>
+              <Zap className="w-6 h-6 text-white" />
             </div>
             <h3
               className="text-xl font-black text-black mb-2"
@@ -111,8 +96,28 @@ export default function Homepage() {
         </div>
       </section>
 
+      {/* Privacy Guarantee Section */}
+      <section id="learn-more" className="bg-[#ffeb3b] border-4 border-black p-12 md:p-16 text-center transform hover:-translate-y-1 transition-all duration-300">
+        <div className="max-w-4xl mx-auto">
+          <div className="w-20 h-20 bg-white border-4 border-black rounded-full flex items-center justify-center mx-auto mb-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <Lock className="w-10 h-10 text-black" strokeWidth={3} />
+          </div>
+          <h2 className="text-3xl md:text-5xl font-black text-black mb-8" style={{ fontFamily: "Georgia, serif" }}>
+            100% Privacy Guarantee
+          </h2>
+          <p className="text-xl md:text-2xl text-black font-bold leading-relaxed mb-8">
+            We are not storing any sensitive data. After you send your list of emails once, it all gets erased from our servers.
+          </p>
+          <div className="bg-white border-4 border-black p-6 inline-block shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+            <p className="text-lg md:text-xl text-black font-black">
+              So please don't worry about providing your email password. It will not get leaked—that's my guarantee.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Upload Section */}
-      <section className="bg-black text-white border-4 border-black p-12 md:p-16">
+      <section id="get-started" className="bg-black text-white border-4 border-black p-12 md:p-16">
         <div className="text-center mb-12 border-b-2 border-white pb-8">
           <h2
             className="text-4xl font-black text-white mb-4"
@@ -129,7 +134,7 @@ export default function Homepage() {
       </section>
 
       {/* Sponsorship & Open Source Section */}
-      <section className="bg-white border-4 border-black p-12 md:p-16">
+      <section className="bg-white border-4 border-black p-8 md:p-16">
         <div className="max-w-4xl mx-auto text-center">
           <h2
             className="text-4xl md:text-5xl font-black text-black mb-6"
@@ -138,32 +143,70 @@ export default function Homepage() {
             Support This Open Source Project
           </h2>
           <div className="w-24 h-1 bg-black mx-auto mb-8"></div>
-          <p className="text-lg text-black mb-12 leading-relaxed">
-            This tool is 100% free and open source. If you find it useful for
-            your campaigns, consider sponsoring the development by scanning the
-            QR code below, or check out the code on GitHub!
+          <p className="text-lg text-black mb-12 leading-relaxed max-w-3xl mx-auto text-left md:text-center">
+            This tool is 100% free and open-source. However, to take it live, we
+            need your help! Free-tier cloud hosting blocks the critical SMTP
+            ports required to send emails. Upgrading to a reliable production
+            server costs <strong>$7/month</strong>.
+            <br />
+            <br />
+            By sponsoring, you help unlock a powerful automation platform:
           </p>
+          {/* Feature Highlight Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-12 text-left">
+            {/* Marketers & Brands Card */}
+            <div className="border-2 border-black p-4 bg-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+              <h3 className="font-black text-xl mb-2 flex items-center gap-2">
+                <span className="p-1.5 bg-white border-2 border-black inline-flex items-center justify-center rounded-sm shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  <Megaphone className="w-5 h-5 text-black" strokeWidth={2.5} />
+                </span>
+                For Marketers & Brands
+              </h3>
+              <p className="text-sm text-gray-800">
+                Upload a lead file, write your copy, and completely automate
+                your email marketing and branding campaigns at scale without
+                manual hassle.
+              </p>
+            </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-center gap-12">
-            {/* QR Code */}
-            <div className="border-4 border-black p-4 bg-white hover:bg-gray-50 transition-colors duration-300 w-64 h-64 shrink-0 relative">
-              <img
-                src="/makeSponser.jpeg"
-                alt="Sponsorship QR Code"
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 bg-black text-white px-4 py-1 font-bold whitespace-nowrap border-2 border-black">
-                Scan to Donate
+            {/* Freshers & Job Seekers Card */}
+            <div className="border-2 border-black p-4 bg-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
+              <h3 className="font-black text-xl mb-2 flex items-center gap-2">
+                <span className="p-1.5 bg-white border-2 border-black inline-flex items-center justify-center rounded-sm shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                  <UserCheck className="w-5 h-5 text-black" strokeWidth={2.5} />
+                </span>
+                For Freshers & Job Seekers
+              </h3>
+              <p className="text-sm text-gray-800">
+                Extract or upload curated lists of HR contacts, then blast your
+                personalized resume and application messages directly to dozens
+                of recruiters instantly.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col lg:flex-row items-center justify-center gap-12">
+            {/* GitHub Sponsor Widget Container */}
+            <div className="relative border-4 border-black p-2 bg-white hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 w-full sm:w-[320px] md:w-[350px] overflow-hidden">
+              <div className="w-full overflow-x-auto overflow-y-auto scrollbar-none flex justify-center items-center">
+                <iframe
+                  src="https://github.com/sponsors/anandpandey2005/card"
+                  title="Sponsor anandpandey2005"
+                  className="w-75 h-42 shrink-0"
+                  style={{ border: 0 }}
+                ></iframe>
+              </div>
+              <div className="absolute -bottom-1  left-1/2 transform -translate-x-1/2 bg-black text-white px-4 py-1 text-sm font-bold whitespace-nowrap border-2 border-black tracking-wide">
+                Make Sponsored
               </div>
             </div>
 
-            {/* Links */}
-            <div className="flex flex-col gap-4 w-full md:w-auto">
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-4 w-full sm:w-[320px] md:w-[350px]">
               <a
                 href="https://github.com/anandpandey2005/Mailer"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 px-8 py-4 bg-black text-white font-bold text-lg hover:bg-gray-800 transition-all duration-300 border-4 border-black"
+                className="flex items-center justify-center gap-3 px-8 py-4 bg-black text-white font-bold text-lg hover:shadow-[6px_6px_0px_0px_rgba(156,163,175,1)] transition-all duration-300 border-4 border-black"
               >
                 <svg
                   className="w-6 h-6"
@@ -179,11 +222,12 @@ export default function Homepage() {
                 </svg>
                 Star on GitHub
               </a>
+
               <a
                 href="https://www.linkedin.com/in/anandpandey2005/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 px-8 py-4 bg-white text-black font-bold text-lg hover:bg-gray-50 transition-all duration-300 border-4 border-black"
+                className="flex items-center justify-center gap-3 px-8 py-4 bg-white text-black font-bold text-lg hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 border-4 border-black"
               >
                 <svg
                   className="w-6 h-6"
