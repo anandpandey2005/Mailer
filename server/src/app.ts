@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import emailRoutes from './routes/emailRoutes'
+import emailRoutes from './routes/emailRoutes.js'
 
 const app: express.Application = express();
 

@@ -1,9 +1,9 @@
 import env from 'dotenv'
 env.config();
-import app from './app'
+import app from './app.js'
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import { clientSMTPConfigs } from './routes/emailRoutes';
+import { clientSMTPConfigs } from './routes/emailRoutes.js';
 
 const PORT = process.env.PORT || 2025;
 
