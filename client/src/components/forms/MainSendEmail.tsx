@@ -1,11 +1,6 @@
-import React, {
-  useState,
-  useEffect,
-  type ReactEventHandler,
-  type ReactHTMLElement,
-} from "react";
+import React, { useState, useEffect } from "react";
 import Alert from "../ui/Alert";
-import { connectSocket, getSocket, onEmailEvent, emitEmailEvent } from "../../handler/socket";
+import { connectSocket, getSocket } from "../../handler/socket";
 
 const MainSendEmail = () => {
   let [formData, setFormData] = useState({
@@ -15,6 +10,10 @@ const MainSendEmail = () => {
     subject: "",
     userEmail: "",
   });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [parsedEmails, setParsedEmails] = useState<string[]>([]);
+  const [worker, setWorker] = useState<Worker | null>(null);
 
   const [alertState, setAlertState] = useState<{
     show: boolean;
@@ -26,52 +25,87 @@ const MainSendEmail = () => {
     message: "",
   });
 
+  const [emailResult, setEmailResult] = useState<{
+    success: boolean;
+    sent: number;
+    total: number;
+    successfulEmails?: string[];
+    errors?: { email: string; error: string }[];
+  } | null>(null);
+
+  const [progress, setProgress] = useState<{
+    sent: number;
+    failed: number;
+    total: number;
+    currentEmail?: string;
+  } | null>(null);
+
   useEffect(() => {
     // Connect to socket
     const socket = connectSocket();
 
-    // Listen for email events
-    onEmailEvent('email_sent', (data) => {
-      setAlertState({
-        show: true,
-        type: "success",
-        message: `Email sent: ${data.message}`,
-      });
+    socket.on("email_progress", (data) => {
+      setProgress(data);
     });
 
-    onEmailEvent('email_error', (data) => {
-      setAlertState({
-        show: true,
-        type: "error",
-        message: `Email error: ${data.message}`,
-      });
-    });
+    const emailWorker = new Worker(
+      new URL("../../worker/pdfParserWorker.ts", import.meta.url),
+      { type: "module" },
+    );
 
-    onEmailEvent('email_status', (data) => {
-      setAlertState({
-        show: true,
-        type: "info",
-        message: `Status: ${data.message}`,
-      });
-    });
+    emailWorker.onmessage = (event) => {
+      const { emails, error } = event.data;
+      setIsLoading(false);
+
+      if (error) {
+        setAlertState({
+          show: true,
+          type: "error",
+          message: `Error parsing file: ${error}`,
+        });
+        setParsedEmails([]);
+      } else {
+        setParsedEmails(emails);
+        setAlertState({
+          show: true,
+          type: "success",
+          message: `Successfully parsed ${emails.length} email(s)`,
+        });
+      }
+    };
+
+    setWorker(emailWorker);
 
     return () => {
-      // Optional: cleanup when component unmounts
+      emailWorker.terminate();
+      socket.off("email_progress");
     };
   }, []);
+
   const handleOnChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     let { name, value } = e.target;
-    console.log(value);
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
     }));
   };
 
-  const submitHandler = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && worker) {
+      setIsLoading(true);
+      worker.postMessage({
+        type: "parse_emails",
+        file: file,
+      });
+    }
+  };
+
+  const submitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formElement = e.currentTarget;
 
     if (
       !formData.appName ||
@@ -88,65 +122,117 @@ const MainSendEmail = () => {
       return;
     }
 
-    // Emit socket event for email sending start
-    emitEmailEvent('email_sending', {
-      appName: formData.appName,
-      subject: formData.subject,
-      recipientEmail: formData.userEmail,
-    });
-
-    const fileInput = e.currentTarget.elements.namedItem(
-      "fileInput",
-    ) as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-
-    const submitData = new FormData();
-    submitData.append("appName", formData.appName);
-    submitData.append("appPassword", formData.appPassword);
-    submitData.append("userEmail", formData.userEmail);
-    submitData.append("subject", formData.subject);
-    submitData.append("emailBody", formData.emailBody);
-    if (file) {
-      submitData.append("file", file);
+    if (parsedEmails.length === 0) {
+      setAlertState({
+        show: true,
+        type: "warning",
+        message: "Please upload a file with email addresses",
+      });
+      return;
     }
 
-    fetch("/api/send-emails", {
-      method: "POST",
-      body: submitData,
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Success:", data);
-        
-        // Emit socket event for success
-        emitEmailEvent('email_success', { data });
-        
-        setAlertState({
-          show: true,
-          type: "success",
-          message: "Emails sent successfully!",
-        });
-        setFormData({
-          appName: "",
-          appPassword: "",
-          emailBody: "",
-          subject: "",
-          userEmail: "",
-        });
-        fileInput.value = "";
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        
-        // Emit socket event for error
-        emitEmailEvent('email_failure', { error: error.message });
-        
-        setAlertState({
-          show: true,
-          type: "error",
-          message: "Error sending emails",
-        });
+    setIsLoading(true);
+    setProgress(null);
+    setEmailResult(null);
+
+    try {
+      const socket = getSocket();
+
+      if (!socket || !socket.connected || !socket.id) {
+        throw new Error(
+          "Cannot connect to server. Please wait a moment or ensure the server is running.",
+        );
+      }
+
+      // Step 1: Register SMTP configuration with server via Socket.io
+      await new Promise<void>((resolve, reject) => {
+        socket.emit(
+          "register_smtp_config",
+          {
+            appName: formData.appName,
+            appPassword: formData.appPassword,
+            userEmail: formData.userEmail,
+          },
+          (response: any) => {
+            if (response && !response.success) {
+              reject(
+                new Error(response.message || "Failed to register SMTP config"),
+              );
+            } else {
+              resolve();
+            }
+          },
+        );
       });
+
+      // Step 2: Send parsed emails and message via POST API
+      const payload = {
+        emails: parsedEmails,
+        subject: formData.subject,
+        emailBody: formData.emailBody,
+      };
+
+      const serverUrl = (
+        import.meta.env.VITE_SERVER_URL || "http://localhost:2025"
+      ).trim();
+      const response = await fetch(
+        `${serverUrl}/api/send-emails?clientId=${socket.id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to send emails");
+      }
+
+      setAlertState({
+        show: true,
+        type: "success",
+        message: `Emails sent successfully! (${data.sent}/${parsedEmails.length})`,
+      });
+
+      setEmailResult({
+        success: true,
+        sent: data.sent,
+        total: parsedEmails.length,
+        successfulEmails: data.successfulEmails,
+        errors: data.errors,
+      });
+
+      // Reset form 
+      setProgress(null);
+      setFormData({
+        appName: "",
+        appPassword: "",
+        emailBody: "",
+        subject: "",
+        userEmail: "",
+      });
+      setParsedEmails([]);
+      const fileInput = formElement.elements.namedItem(
+        "fileInput",
+      ) as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = "";
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setAlertState({
+        show: true,
+        type: "error",
+        message:
+          error instanceof Error ? error.message : "Error sending emails",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   const formLayout = [
     {
@@ -220,10 +306,16 @@ const MainSendEmail = () => {
                   name={item.name}
                   accept=".pdf,.xlsx,.csv"
                   className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={isLoading}
                 />
                 <label
                   htmlFor={item.id}
-                  className="block bg-gray-50 border-4 border-dashed border-gray-300 p-8 text-center hover:bg-gray-100 transition-colors cursor-pointer"
+                  className={`block bg-gray-50 border-4 border-dashed border-gray-300 p-8 text-center ${
+                    isLoading
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-gray-100 cursor-pointer"
+                  } transition-colors`}
                 >
                   <svg
                     className="w-12 h-12 text-black mx-auto mb-3"
@@ -239,7 +331,9 @@ const MainSendEmail = () => {
                     />
                   </svg>
                   <div>
-                    <p className="text-gray-600 text-sm">or click to browse</p>
+                    <p className="text-gray-600 text-sm">
+                      {isLoading ? "Parsing emails..." : "or click to browse"}
+                    </p>
                     <p className="text-gray-500 text-xs mt-2">{item.desc}</p>
                   </div>
                 </label>
@@ -249,18 +343,22 @@ const MainSendEmail = () => {
                 id={item.id}
                 name={item.name}
                 onChange={handleOnChange}
+                value={formData[item.name as keyof typeof formData]}
                 placeholder={item.placeholder}
                 rows={4}
                 className={inputStyles}
+                disabled={isLoading}
               />
             ) : (
               <input
                 type={item.type}
                 id={item.id}
                 onChange={handleOnChange}
+                value={formData[item.name as keyof typeof formData]}
                 name={item.name}
                 placeholder={item.placeholder}
                 className={inputStyles}
+                disabled={isLoading}
               />
             )}
             {!item.isFileUpload && (
@@ -269,11 +367,73 @@ const MainSendEmail = () => {
           </div>
         ))}
 
+        {parsedEmails.length > 0 && (
+          <div className="bg-green-50 border-2 border-green-300 p-4 rounded">
+            <p className="font-bold text-green-900 mb-2">
+              ✓ {parsedEmails.length} email(s) parsed
+            </p>
+            <div className="max-h-32 overflow-y-auto text-xs text-green-800">
+              <p className="text-green-700 mb-2">Sample emails:</p>
+              <ul>
+                {parsedEmails.slice(0, 5).map((email, idx) => (
+                  <li key={idx} className="font-mono">
+                    • {email}
+                  </li>
+                ))}
+              </ul>
+              {parsedEmails.length > 5 && (
+                <p className="text-green-700 mt-2">
+                  + {parsedEmails.length - 5} more email(s)
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {progress && isLoading && (
+          <div className="bg-gray-50 border-2 border-black p-6">
+            <h3 className="font-bold mb-2">Sending Progress...</h3>
+            <div className="w-full bg-gray-200 h-4 mb-2 border border-black">
+              <div
+                className="bg-black h-full transition-all duration-300"
+                style={{
+                  width: `${((progress.sent + progress.failed) / progress.total) * 100}%`,
+                }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-sm font-mono text-gray-700">
+              <span>
+                Sent:{" "}
+                <span className="text-green-600 font-bold">
+                  {progress.sent}
+                </span>
+              </span>
+              <span>
+                Failed:{" "}
+                <span className="text-red-600 font-bold">
+                  {progress.failed}
+                </span>
+              </span>
+              <span>Total: {progress.total}</span>
+            </div>
+            {progress.currentEmail && (
+              <p className="text-xs text-gray-500 mt-2 truncate">
+                Processing: {progress.currentEmail}
+              </p>
+            )}
+          </div>
+        )}
+
         <button
           type="submit"
-          className="w-full bg-black hover:bg-gray-800 text-white font-black text-lg py-4 border-2 border-black transition-all duration-300"
+          disabled={isLoading || parsedEmails.length === 0}
+          className={`w-full font-black text-lg py-4 border-2 transition-all duration-300 ${
+            isLoading || parsedEmails.length === 0
+              ? "bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed"
+              : "bg-black hover:bg-gray-800 text-white border-black"
+          }`}
         >
-          SEND EMAILS
+          {isLoading ? "PROCESSING..." : "SEND EMAILS"}
         </button>
       </form>
 
@@ -285,6 +445,58 @@ const MainSendEmail = () => {
           autoClose={true}
           duration={4000}
         />
+      )}
+
+      {emailResult && (
+        <div className="bg-white text-black p-8 border-2 border-black space-y-4">
+          <h2 className="text-2xl font-black mb-4">Send Report</h2>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-green-50 p-4 border border-green-200">
+              <p className="text-sm text-green-700 font-bold">
+                Successfully Sent
+              </p>
+              <p className="text-3xl font-black text-green-900">
+                {emailResult.sent}
+              </p>
+            </div>
+            <div className="bg-red-50 p-4 border border-red-200">
+              <p className="text-sm text-red-700 font-bold">Failed</p>
+              <p className="text-3xl font-black text-red-900">
+                {emailResult.total - emailResult.sent}
+              </p>
+            </div>
+          </div>
+
+          {emailResult.successfulEmails &&
+            emailResult.successfulEmails.length > 0 && (
+              <div>
+                <h3 className="font-bold text-lg mb-2 text-green-700">
+                  Successful Recipients:
+                </h3>
+                <ul className="list-disc list-inside max-h-40 overflow-y-auto bg-gray-50 p-4 border border-gray-200 font-mono text-sm">
+                  {emailResult.successfulEmails.map((email, idx) => (
+                    <li key={idx} className="text-gray-700">
+                      {email}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+          {emailResult.errors && emailResult.errors.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-bold text-lg mb-2 text-red-700">Errors:</h3>
+              <ul className="list-none max-h-40 overflow-y-auto bg-red-50 p-4 border border-red-200 text-sm">
+                {emailResult.errors.map((err, idx) => (
+                  <li key={idx} className="mb-2">
+                    <span className="font-bold text-red-800">{err.email}</span>:{" "}
+                    <span className="text-red-600">{err.error}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

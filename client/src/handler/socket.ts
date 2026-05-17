@@ -3,9 +3,15 @@ import io, { Socket } from 'socket.io-client';
 let socket: Socket | null = null;
 
 export const connectSocket = (): Socket => {
-    if (socket) return socket;
+    if (socket) {
+        console.log('Socket already exists, returning existing instance.');
+        return socket;
+    }
 
-    socket = io('http://localhost:2025', {
+    const serverUrl = (import.meta.env.VITE_SERVER_URL || 'http://localhost:2025').trim();
+    console.log('Attempting to connect to socket server at:', serverUrl);
+
+    socket = io(serverUrl, {
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
@@ -36,17 +42,5 @@ export const disconnectSocket = () => {
     if (socket) {
         socket.disconnect();
         socket = null;
-    }
-};
-
-export const emitEmailEvent = (eventName: string, data: any) => {
-    if (socket && socket.connected) {
-        socket.emit(eventName, data);
-    }
-};
-
-export const onEmailEvent = (eventName: string, callback: (data: any) => void) => {
-    if (socket) {
-        socket.on(eventName, callback);
     }
 };
