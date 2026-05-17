@@ -2,7 +2,7 @@ import { Mail } from "lucide-react";
 
 export default function Navbar() {
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b-4 border-black mb-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+    <nav className="sticky  max-w-350 mx-auto top-0 z-50 bg-white border-b-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
       <div className="max-w-325 mx-auto px-4 py-4 flex justify-between items-center">
         <div
           className="text-2xl md:text-4xl font-black tracking-tighter text-black hover:text-gray-700 transition-colors"
@@ -28,7 +28,7 @@ export default function Navbar() {
               title="Sponsor anandpandey2005"
               height="32"
               width="114"
-              style={{ border: 0, borderRadius: '6px' }}
+              style={{ border: 0, borderRadius: "6px" }}
             ></iframe>
           </div>
         </div>
